@@ -55,6 +55,43 @@ document.addEventListener("DOMContentLoaded", () => {
 
             li.appendChild(badge);
             li.appendChild(nameSpan);
+            // Delete/unregister button
+            const deleteBtn = document.createElement("button");
+            deleteBtn.className = "participant-delete";
+            deleteBtn.title = `Unregister ${p}`;
+            deleteBtn.innerHTML = "✖";
+            deleteBtn.addEventListener("click", async (e) => {
+              e.stopPropagation();
+              if (!confirm(`Unregister ${p} from ${name}?`)) return;
+              try {
+                const res = await fetch(
+                  `/activities/${encodeURIComponent(name)}/participants?email=${encodeURIComponent(p)}`,
+                  { method: "DELETE" }
+                );
+                const result = await res.json();
+                if (res.ok) {
+                  messageDiv.textContent = result.message;
+                  messageDiv.className = "message success";
+                  messageDiv.classList.remove("hidden");
+                  // Refresh the activities list to reflect the change
+                  fetchActivities();
+                } else {
+                  messageDiv.textContent = result.detail || "Failed to unregister";
+                  messageDiv.className = "message error";
+                  messageDiv.classList.remove("hidden");
+                }
+                setTimeout(() => {
+                  messageDiv.classList.add("hidden");
+                }, 4000);
+              } catch (err) {
+                console.error("Error unregistering participant:", err);
+                messageDiv.textContent = "Network error while unregistering";
+                messageDiv.className = "message error";
+                messageDiv.classList.remove("hidden");
+              }
+            });
+
+            li.appendChild(deleteBtn);
             ul.appendChild(li);
           });
         } else {
@@ -95,11 +132,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (response.ok) {
         messageDiv.textContent = result.message;
-        messageDiv.className = "success";
+        messageDiv.className = "message success";
         signupForm.reset();
+        // Refresh activities so the new participant shows up immediately
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
+        messageDiv.className = "message error";
       }
 
       messageDiv.classList.remove("hidden");
@@ -110,7 +149,7 @@ document.addEventListener("DOMContentLoaded", () => {
       }, 5000);
     } catch (error) {
       messageDiv.textContent = "Failed to sign up. Please try again.";
-      messageDiv.className = "error";
+      messageDiv.className = "message error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
     }
